@@ -66,16 +66,13 @@ app.get('/fecha/:fechaIngreso', async function(req, res) {
     }
 });
 
-// Endpoint para simular una cotización
 app.post('/cotizacion', async function(req, res) {
     const productosCotizados = req.body.productos;
     
     try {
-        // Realizar la búsqueda de los productos en la base de datos
         const idsProductos = productosCotizados.map(producto => producto.id);
         const [rows] = await db.query('select * from productos where id in (?)', [idsProductos]);
-        
-        // Calcular el precio total de la cotización
+
         let precioTotal = 0;
         const productosCotizadosConDetalle = productosCotizados.map(producto => {
             const productoBD = rows.find(row => row.id === producto.id);
@@ -92,10 +89,18 @@ app.post('/cotizacion', async function(req, res) {
                     subtotal: subtotal
                 };
             }
-            return null; // Manejar productos no encontrados en la base de datos
-        }).filter(producto => producto !== null); // Filtrar productos encontrados
+            return null;
+        }).filter(producto => producto !== null);
         
-        // Devolver la cotización con los detalles y el precio total
+        const fechaActual = new Date().toISOString().slice(0, 10);
+        
+        const [result] = await db.execute('INSERT INTO cotizacion (fecha, precioTotal) VALUES (?, ?)', [fechaActual, precioTotal]);
+        const idCotizacion = result.insertId;
+
+        for (const producto of productosCotizadosConDetalle) {
+            await db.execute('INSERT INTO cotizacion_detalles (idCot, id, cantidad, precioUnitario, subtotal) VALUES (?, ?, ?, ?, ?)', [idCotizacion, producto.id, producto.cantidad, producto.precioUnitario, producto.subtotal]);
+        }
+        
         res.json({
             productos: productosCotizadosConDetalle,
             precioTotal: precioTotal
