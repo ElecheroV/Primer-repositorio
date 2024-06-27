@@ -1,9 +1,10 @@
 const express = require('express');
 const db = require('./dbconfig');
 const faker = require('faker');
-
+const morgan = require('morgan');
 const app = express();
 app.use(express.json());
+app.use(morgan('method :url :status :res[content-length] - :response-time ms'));
 
 app.post('/', async function(req, res) {
     try {
@@ -68,6 +69,21 @@ app.delete('/:id', async function(req, res) {
 });
 
 
+app.get('/:mostrar', async function(req, res) {
+    try {
+        const [rows] = await db.query('SELECT * FROM productos');
+        if (rows.length > 0) {
+            res.json(rows);
+        } else {
+            res.status(404).send('No se encontraron productos');
+        }
+    } catch (err) {
+        console.error('Error al obtener los productos:', err);
+        res.status(500).send('Error al obtener los productos');
+    }
+});
+
+
 app.get('/:id', async function(req, res) {
     const id = parseInt(req.params.id);
     try {
@@ -82,6 +98,7 @@ app.get('/:id', async function(req, res) {
         res.status(500).send('Error al obtener el producto');
     }
 });
+
 
 
 app.get('/fecha/:fechaIngreso', async function(req, res) {
@@ -136,6 +153,4 @@ app.post('/cotizacion', async function(req, res) {
     }
 });
 
-app.listen(3000, () => {
-    console.log('Servidor escuchando en puerto 3000');
-});
+app.listen(3000)
